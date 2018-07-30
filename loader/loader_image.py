@@ -1,0 +1,185 @@
+import numpy as np 
+import os
+import cv2
+import glob
+
+from loader.loader_base import LoaderBase
+
+ORIG_SHAPE = (1600, 1600)
+
+IMG_FOLDER = "images"
+IMG_FORMAT = "jpg"
+TRG_FOLDER = "targets"
+TRG_FORMAT = "png"
+TRG_CLASSES = 4 # unknown, solid, liquid, gas
+
+class AM2018ImageLoader(LoaderBase):
+    """
+    """
+    def __init__(self, crop_scale=None, img_folder=IMG_FOLDER, img_format=IMG_FORMAT, trg_folder=TRG_FOLDER, trg_format=TRG_FORMAT):
+        """
+        Args:
+            crop_scale: Factor with which the images are scaled before cropping. (< 1 for more area covered)
+            img_folder: The name of the folder in which the images are found in the data_paths
+            img_format: The file endings of valid images
+            trg_folder: The name of the folder in which the target images are found in the data_paths
+            trg_format: The file endings of valid target images
+        """
+        super().__init__(TRG_CLASSES, crop_scale)
+
+        self.img_folder = img_folder
+        self.img_format = img_format
+        self.trg_folder = trg_folder
+        self.trg_format = trg_format
+
+        self.shape = ORIG_SHAPE
+
+    def __clean_format(self, img, rescale=False):
+        """
+        Clean the format of an image to be either np.uint8 or np.float
+        """
+        dtype = img.dtype
+
+        if dtype == np.uint8 or dtype == np.float:
+            return img
+        
+        imin = np.min(img)
+        imax = np.max(img)
+        
+        # np.uint8 from np.integer related
+        if issubclass(dtype, np.integer) and imin >= 0 and imax <= 255:
+            if imax <= 1 and rescale:
+                img = img * 255
+
+            return img.astype(np.uint8)
+        
+        # np.float from np.floating related
+        if issubclass(dtype, np.floating) and imin >= 0 and imax <= 1: # [pylint: ignore E1101]
+            if imax > 1 and rescale:
+                img = img / 255.
+            
+            return img.astype(np.float)
+
+        raise AttributeError("Unable to discover format for image: ", img.shape, dtype, "[", imin, ",", imax, "]")
+    
+    def __load_image(self, file, shape=None):
+        """
+        Load an image from disk
+        Args:
+            file: The file path of the image to load
+            shape: The desired shape of the image. If None, the default shape will be used
+        Returns:
+            An greyscale image with the desired shape
+        """
+        img = cv2.imread(file, 0) # 0: greyscale
+        if img is None:
+            return img
+        
+        if shape is None:
+            shape = self.shape
+        
+        # clean format
+        img = self.__clean_format(img, rescale=True)
+
+        # resize
+        return self._resize(img, shape)
+
+    def __load_target(self, file, shape=None):
+        """
+        Load a target image from disk
+        Args:
+            file: The file path of the image to load
+            shape: The desired shape of the image. If None, the default shape will be used
+        Returns:
+            An image with n_classes channels and the desired shape
+        """
+        trg = cv2.imread(file, 0)
+
+        if trg is None:
+            return trg
+        
+        if shape is None:
+            shape = self.shape
+
+        # to classes
+        if(len(trg.shape) == 2 or trg.shape[-1] == 1):
+            trg = np.squeeze(trg)
+            out = np.zeros((self.n_classes, *trg.shape), dtype=np.uint8)
+            for c in range(self.n_classes):
+                out[c] = (trg == c).astype(np.uint8)
+            
+            trg = np.moveaxis(out, 0, -1)
+
+        # clean format
+        trg = self.__clean_format(trg) # no rescale to not mess with classes
+        
+        # resize
+        return self._resize(trg, shape)
+
+    def discover_data(self, data_paths, num_data=None):
+        """
+        Discover all usable data in the provided data paths
+        Args:
+            data_paths: List of paths where data files can be found.
+            num_data: Limit the number of files that are used
+        Returns:
+            A nested array with all the sequences of data files found.
+        """
+        data = []
+        for path in sorted(data_paths):            
+            # get images and targets in folder
+            images = sorted(glob.glob(os.path.join(path, "%s/*.%s" % (self.img_folder, self.img_format))))
+            targets = sorted(glob.glob(os.path.join(path, "%s/*.%s" % (self.trg_folder, self.trg_format))))
+            
+            # sort out all the images/targets that dont have a partner
+            img_names = set([img[img.rfind('/') + 1:img.rfind('.')] for img in images])
+            trg_names = set([trg[trg.rfind('/') + 1:trg.rfind('.')] for trg in targets])
+
+            valid = img_names & trg_names # intersection of lists
+            
+            # create some placeholder path for the image/target
+            files = [path + "%s/" + str(name) + ".%s" for name in sorted(list(valid))] 
+            
+            if num_data is not None:
+                assert(num_data > 0)
+                max_idx = max(1, int(num_data/ len(data_paths))) # make it so we have num_data files evenly distributed among data_paths
+                files = files[:max_idx]
+
+            data.append(files) # new array for each sequence, so data is like this [[...], [...], ...]
+        
+        return data
+
+    def _get_labeled(self, file, input_shape=None, output_shape=None, source='auto'):
+        """
+        Get the content of the file as labeled data in the specified shape.
+        """
+        img_path = file % (self.img_folder, self.img_format)        
+        lbl_path = file % (self.trg_folder, self.trg_format)
+
+        if source == 'auto':
+            img = self.__load_image(img_path, input_shape)
+            lbl = self.__load_target(lbl_path, output_shape)
+        else:
+            raise AttributeError("Unknown source: %s" % source)
+
+        if lbl is None:
+            raise RuntimeError("No label found in " % lbl_path)
+    
+        return img, lbl
+
+    def _get_unlabeled(self, file, input_shape=None, source='auto'):
+        """
+        Get the content of the txtfile as unlabeled data in the specified shape.
+        """
+        img_path = file % (self.img_folder, self.img_format)        
+
+        if source == 'auto':
+            img = self.__load_image(img_path)
+        else:
+            raise AttributeError("Unknown source: %s" % source)
+
+        if input_shape is not None:
+            img = self._resize(img, input_shape)
+        
+        return img, None
+    
