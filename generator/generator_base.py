@@ -61,7 +61,7 @@ class GeneratorBase():
         else:
             # get the next image and provide it as label of this sequence
             lbl, _ = self.loader._get_unlabeled(files[-1], output_shape, source='auto')
-        
+
         return np.asarray(imgs), np.asarray(lbl)
 
     def _get_sequence(self, files, labeled, input_shape=None, output_shape=None):
@@ -170,9 +170,9 @@ class GeneratorBase():
             AttributeError in case the supplied structure is invalid
         """
         if input_shape is not None:
-        assert(len(input_shape) == 2) # h, w
+            assert(len(input_shape) == 2) # h, w
         if output_shape is not None:
-        assert(len(output_shape) == 2) # h, w
+            assert(len(output_shape) == 2) # h, w
 
         if structure == 'sequence':
             x, y = self._get_sequence(files, labeled, input_shape, output_shape)
@@ -182,7 +182,7 @@ class GeneratorBase():
             x, y = self._get_pair(files, labeled, input_shape, output_shape)
         else:
             raise AttributeError("Unknown data structure:", structure, ". Must be in [sequence, stacked, pair]")
-        
+
         return x, y
 
     def __get_crop(self, x, y, num_crops, structure, input_shape, output_shape, seed=None):
@@ -376,10 +376,10 @@ class GeneratorBase():
                 x_out, y_out = self.__get_crop(x, y, num_crops, structure, input_shape, output_shape)
 
                 x_out, y_out = np.array(x_out), np.array(y_out)
-
+                
                 if labeled and self.ignore_unknown:                    
                     y_out = y_out[..., 1:]
-                
+
                 # correct shape and apply ordering
                 x_out, y_out = self.__correct_shape(x_out, y_out, structure, labeled, ordering, flatten_label)
 

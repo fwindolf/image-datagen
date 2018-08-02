@@ -1,9 +1,9 @@
 from universal_datagen.generator.generator_base import GeneratorBase
-from universal_datagen.loader.loader_image import AM2018ImageLoader
+from universal_datagen.loader.loader_text import AM2018TxtLoader
 
-class AM2018ImageGenerator(GeneratorBase):
+class AM2018TxtGenerator(GeneratorBase):
     """
-    A generator for image based AM2018 data.
+    A generator for text based AM2018 data.
     """
     def __init__(self, data_paths, image_dims, label_dims, crop_scale=None, ignore_unknown=False, num_data=None):
         """
@@ -19,7 +19,8 @@ class AM2018ImageGenerator(GeneratorBase):
 
         super().__init__(data_paths, image_dims, label_dims, ignore_unknown, num_data)
 
-        self.loader = AM2018ImageLoader(crop_scale)
+        n_classes = label_dims[-1]
+        self.loader = AM2018TxtLoader(n_classes, crop_scale)
         self.data = self.loader.discover_data(data_paths, num_data)
 
     
