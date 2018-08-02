@@ -169,7 +169,9 @@ class GeneratorBase():
         Raises:
             AttributeError in case the supplied structure is invalid
         """
+        if input_shape is not None:
         assert(len(input_shape) == 2) # h, w
+        if output_shape is not None:
         assert(len(output_shape) == 2) # h, w
 
         if structure == 'sequence':
