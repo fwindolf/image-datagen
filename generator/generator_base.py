@@ -8,14 +8,13 @@ class GeneratorBase():
 
     Internally, all image data is handeled in channel_last format.
     """
-    def __init__(self, data_paths, image_dims, label_dims, flatten_label=False, ignore_unknown=False, num_data=None):
+    def __init__(self, data_paths, image_dims, label_dims, ignore_unknown=False, num_data=None):
         """
         Create a new data generator base.
          Args:
             data_paths: The paths where the data can be found. Each path should contain files with increasing numbers from one sequence.
             image_dims: The dimensions of generated image data in (height, width, channels) format, with channels being the number of images stacked together.
             output_dims: The dimensions of generated label data in (height, width, n_classes) format, with n_classes including background (0) class
-            flatten_label: Flag to enforce that the output comes in output_height*output_width dimension.
             ignore_unknown: Flag to ignore the first class (0) in the data. This will produce output (target) data with n_classes - 1 channels.
             num_data: Artificially reduce the number of data points to use.
         """
@@ -33,7 +32,6 @@ class GeneratorBase():
         self.output_width = label_dims[1]
         self.n_classes = label_dims[2]
 
-        self.flatten_label = flatten_label
         self.ignore_unknown = ignore_unknown
 
         self.loader = None
@@ -64,12 +62,6 @@ class GeneratorBase():
             # get the next image and provide it as label of this sequence
             lbl, _ = self.loader._get_unlabeled(files[-1], output_shape, source='auto')
         
-        # stack the images by squeezing along the channel dimension and using the array dimension as new channel
-        if len(imgs.shape) > 3:
-            imgs = np.squeeze(np.array(imgs), axis=3) # TODO: For input images with c > 1 this wont work!
-        
-        imgs = np.moveaxis(imgs, 0, -1) 
-
         return np.asarray(imgs), np.asarray(lbl)
 
     def _get_sequence(self, files, labeled, input_shape=None, output_shape=None):
@@ -127,7 +119,6 @@ class GeneratorBase():
             return np.asarray(img), np.asarray(lbl)
         else:
             return np.asarray(img), np.asarray(unlbl)
-
 
     def __chunks(self, data, size):
         """
@@ -194,6 +185,7 @@ class GeneratorBase():
 
     def __generator(self, data, structure, labeled, batch_size, num_crops, ordering='channel_first'):
         """
+    def __generator(self, data, structure, labeled, batch_size, num_crops, flatten_label, ordering='channel_first'):
         Create a new generator for the provided data
         Args:
             data: Chunks of data files that the loader can interpret
@@ -201,6 +193,7 @@ class GeneratorBase():
             labeled: The flag the decides if the returned data is labeled
             batch_size: The number of data chunks in one batch
             num_crops: The number of crops per chunk or None if no cropping
+            flatten_label: Reduce the h,w dimension and put channels to the last dimension
             ordering: The way the data is returned, either [..., h, w, c] for channel_last or [..., c, h, w] for channel_first
         Return:
             A generator that yields batches of X,Y from chunks of the data.
@@ -255,7 +248,7 @@ class GeneratorBase():
         
             yield np.asarray(X), np.asarray(Y)
 
-    def generator(self, structure, labeled, batch_size, num_crops=None, split=None, ordering='channel_first'):
+    def generator(self, structure, labeled, batch_size, num_crops=None, split=None, flatten_label=False, ordering='channel_first'):
         """
         Create a generator or a tuple of generators 
         Args:
@@ -264,6 +257,7 @@ class GeneratorBase():
             batch_size: The number of data chunks in one batch
             num_crops: The number of crops per chunk or None if no cropping
             split: Split the data between training and validation, float in [0, 1]
+            flatten_label: Reduce the h,w dimension and put channels to the last dimension
             ordering: The way the data is returned, either [..., h, w, c] for channel_last or [..., c, h, w] for channel_first
         Return:
             One or two generators that yields batches of X,Y from chunks of the data.
@@ -280,4 +274,5 @@ class GeneratorBase():
             vgen = self.__generator(cycle(vdata), structure, labeled, batch_size, num_crops, ordering)
             return tgen, vgen
         else:
-            return self.__generator(cycle(data), structure, labeled, batch_size, num_crops, ordering)
+    def __len__(self):
+        return int(np.sum([len(seq) // self.stack_size for seq in self.data]))
