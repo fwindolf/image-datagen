@@ -31,10 +31,9 @@ class LoaderBase():
         assert(len(output_shape) == 2) # exactly h, w
         assert(img.dtype == np.uint8 or img.dtype == np.float)
         
-        s_before = len(img.shape)        
+        s_before = len(img.shape)       
         new_height = output_shape[0]
         new_width = output_shape[1]
-
         # resize takes (new_width, new_height) as shape        
         img = cv2.resize(img, (new_width, new_height))
         # check if shape got collapsed, reinflate if necessary
@@ -68,14 +67,17 @@ class LoaderBase():
         if y is None:
             y = np.zeros_like(x)
             unlabeled = True
-    
-        assert(len(y.shape) == 3)        
+        
+        assert(len(y.shape) >= 3)        
         assert(len(x.shape) == 3)
 
         xc, yc = None, None
         h_new, w_new = x_shape
-
-        h_out, w_out = y_shape if y_shape else h_new, w_new
+        
+        if y_shape:
+            h_out, w_out = y_shape
+        else:
+            h_out, w_out = h_new, w_new
         h, w = x.shape[:2]
 
         # rescale the whole image to make the crops cover more area (eg. even with little input_shape)
