@@ -183,8 +183,144 @@ class GeneratorBase():
         
         return x, y
 
-    def __generator(self, data, structure, labeled, batch_size, num_crops, ordering='channel_first'):
+    def __correct_shape_pair(self, x, y, labeled, ordering, flatten_label):
         """
+        Correct the shape of x and y for pair structured data.
+        Args:
+            x: Images
+            y: Labels            
+            labeled: Is the data with or without labels
+            flatten_label: Reduce the h,w dimension and put channels to the last dimension
+        Returns:
+            A tuple of the shape corrected x, y inputs
+        Raises:
+            AssertionError in case of invalid dimensions or orderings
+        """
+        x_shape = x.shape
+        y_shape = y.shape
+
+        assert(len(x_shape) <= 3)
+        assert(len(y_shape) <= 3)
+    
+        if len(x_shape) < 3: # channels lost
+            x = x[:, :, np.newaxis]
+        if not labeled and len(y_shape) < 3: # channels lost
+            y = y[:, :, np.newaxis]
+        
+        assert(len(x.shape) == 3) # [h, w, c]
+        assert(len(y.shape) == 3) # [h, w, c/classes]
+
+        if ordering == 'channel_first':
+            x = np.moveaxis(x, -1, 0)
+            if not flatten_label: # flattened label always has channel last
+                y = np.moveaxis(y, -1, 0)
+
+        if flatten_label: 
+            y = np.reshape(y, (y.shape[0] * y.shape[1], y.shape[-1])) # the label will become [h*w, c/classes]
+
+        return x, y
+
+    def __correct_shape_stacked(self, x, y, labeled, ordering, flatten_label):
+        """
+        Correct the shape of x and y for stacked data.
+        Args:
+            x: Images
+            y: Labels            
+            labeled: Is the data with or without labels
+            flatten_label: Reduce the h,w dimension and put channels to the last dimension
+        Returns:
+            A tuple of the shape corrected x, y inputs
+        Raises:
+            AssertionError in case of invalid dimensions or orderings
+        """
+        x_shape = x.shape
+        y_shape = y.shape
+
+        assert(x_shape[0] == self.stack_size - 1)
+
+        if len(x_shape) == 3: # channels lost
+            x = x[:, :, :, np.newaxis]
+        if not labeled and len(y_shape) == 2:
+            y = y[:, :, np.newaxis]
+
+        assert(len(x.shape) == 4) # [sz, h, w, c]
+        assert(len(y.shape) == 3) # [h, w, c/classes]
+
+        if x.shape[-1] == 1:
+            x = np.moveaxis(np.squeeze(x), 1, -1) # [sz, h, w, 1] -> [h, w, sz]
+
+        if ordering == 'channel_first':
+            x = np.moveaxis(x, -1, 1)
+            if not flatten_label:
+                y = np.moveaxis(y, -1, 0)
+
+        if flatten_label: 
+            y = np.reshape(y, (y.shape[0] * y.shape[1], -1)) # the label will become [h*w, c/classes]
+
+        
+        return x, y
+
+    def __correct_shape_sequence(self, x, y, labeled, ordering, flatten_label):
+        """
+        Correct the shape of x and y for stacked data.
+        Args:
+            x: Images
+            y: Labels            
+            labeled: Is the data with or without labels
+            flatten_label: Reduce the h,w dimension and put channels to the last dimension
+        Returns:
+            A tuple of the shape corrected x, y inputs
+        Raises:
+            AssertionError in case of invalid dimensions or orderings
+        """  
+        x_shape = x.shape
+        y_shape = y.shape
+
+        assert(x_shape[0] == self.stack_size - 1)
+        assert(y_shape[0] == self.stack_size - 1)
+
+        if len(x_shape) == 3: # channels lost
+            x = x[:, :, :, np.newaxis]
+        if not labeled and len(y_shape) == 3: 
+            y = y[:, :, :, np.newaxis]
+        
+        assert(len(x.shape) == 4) # [sz, h, w, c]
+        assert(len(y.shape) == 4) # [sz, h, w, c/classes]
+
+        if ordering == 'channel_first':
+            x = np.moveaxis(x, -1, 1)
+            if not flatten_label:
+                y = np.moveaxis(y, -1, 1)
+
+        if flatten_label: 
+            y = np.reshape(y, (y.shape[0], y.shape[0] * y.shape[1], -1)) # the label will become [sz, h*w, c/classes]
+
+        return x, y
+
+    def __correct_shape(self, x, y, structure, labeled, ordering, flatten_label):
+        """
+        Correct the shape of x and y depending on structure and labeled.
+        Args:
+            x: Images
+            y: Labels
+            structure: Structure of the data, one of [sequence, stacked, pair]
+            labeled: Is the data with or without labels
+        Returns:
+            A tuple of the shape corrected x, y inputs
+        Raises:
+            AssertionError in case of invalid dimensions or orderings
+        """
+        assert(ordering in ['channel_first', 'channel_last'])
+        
+        if structure == 'sequence':
+            return self.__correct_shape_sequence(x, y, labeled, ordering, flatten_label)
+        elif structure == 'stacked':
+            return self.__correct_shape_stacked(x, y, labeled, ordering, flatten_label)
+        elif structure == 'pair':
+            return self.__correct_shape_pair(x, y, labeled, ordering, flatten_label)
+        else:
+            raise AttributeError("Unknow structure : %s" % structure)
+
     def __generator(self, data, structure, labeled, batch_size, num_crops, flatten_label, ordering='channel_first'):
         Create a new generator for the provided data
         Args:
