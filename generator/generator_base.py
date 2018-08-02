@@ -160,8 +160,8 @@ class GeneratorBase():
         Get a chunk of data for some files.
         Args:
             files: The files pointing to the location of the data
-            structure: The structure of the returned data (sequence, stacked or pair)
-            labeled: The flag the decides if the returned data is labeled
+            structure: Structure of the returned data (sequence, stacked or pair)
+            labeled: Decides if the returned data is labeled
             input_shape: height, width of the returned image(s)
             output_shape: height, width of the returned label(s)
         Return:
@@ -345,11 +345,12 @@ class GeneratorBase():
             raise AttributeError("Unknow structure : %s" % structure)
 
     def __generator(self, data, structure, labeled, batch_size, num_crops, flatten_label, ordering='channel_first'):
+        """
         Create a new generator for the provided data
         Args:
             data: Chunks of data files that the loader can interpret
-            structure: The structure of the returned data (sequence, stacked or pair)
-            labeled: The flag the decides if the returned data is labeled
+            structure: Structure of the returned data (sequence, stacked or pair)
+            labeled: Decides if the returned data is labeled
             batch_size: The number of data chunks in one batch
             num_crops: The number of crops per chunk or None if no cropping
             flatten_label: Reduce the h,w dimension and put channels to the last dimension
@@ -372,35 +373,15 @@ class GeneratorBase():
 
                 x, y = self.__get_chunk(files, structure, labeled, i_s, o_s)
 
-                # crop if necessary
-                if num_crops is not None:
-                    seed = np.random.randint(10000) # new seed every iteration, but same crops for the stack
-                    cropped = [self.loader._get_crop(x[i], y[i], input_shape, output_shape, seed=seed) for i in range(len(x))]
-                    x_out, y_out = zip(*cropped)
-                else:
-                    x_out, y_out = x, y # dont destroy original x,y for num_crops > 1
+                x_out, y_out = self.__get_crop(x, y, num_crops, structure, input_shape, output_shape)
 
                 x_out, y_out = np.array(x_out), np.array(y_out)
 
-                # post process                
-                if self.flatten_label:
-                    y_out = np.reshape(y_out, (y_out.shape[0], np.prod(output_shape), y_out.shape[3]))
-                
                 if labeled and self.ignore_unknown:                    
                     y_out = y_out[..., 1:]
                 
-                # make sure that the image data is in form [sz, h, w, c]
-                if len(x_out.shape) < 4:
-                    x_out = x_out[:, :, :, np.newaxis]
-
-                # put into right ordering
-                if ordering is 'channel_first':
-                    x_out = np.moveaxis(x_out, -1, 1)
-                    y_out = np.moveaxis(y_out, -1, 1)
-                elif ordering is 'channel_last':
-                    pass # already in right ordering
-                else:
-                    raise AttributeError("Unknown ordering: %s" % ordering)
+                # correct shape and apply ordering
+                x_out, y_out = self.__correct_shape(x_out, y_out, structure, labeled, ordering, flatten_label)
 
                 X.append(x_out)
                 Y.append(y_out)
@@ -411,8 +392,8 @@ class GeneratorBase():
         """
         Create a generator or a tuple of generators 
         Args:
-            structure: The structure of the returned data (sequence, stacked or pair)
-            labeled: The flag the decides if the returned data is labeled
+            structure: Structure of the returned data (sequence, stacked or pair)
+            labeled: Decides if the returned data is labeled
             batch_size: The number of data chunks in one batch
             num_crops: The number of crops per chunk or None if no cropping
             split: Split the data between training and validation, float in [0, 1]
@@ -429,9 +410,46 @@ class GeneratorBase():
             tdata = data[:split_idx]
             vdata = data[split_idx:]
 
-            tgen = self.__generator(cycle(tdata), structure, labeled, batch_size, num_crops, ordering)
-            vgen = self.__generator(cycle(vdata), structure, labeled, batch_size, num_crops, ordering)
+            tgen = self.__generator(cycle(tdata), structure, labeled, batch_size, num_crops, flatten_label, ordering)
+            vgen = self.__generator(cycle(vdata), structure, labeled, batch_size, num_crops, flatten_label, ordering)
             return tgen, vgen
         else:
+            return self.__generator(cycle(data), structure, labeled, batch_size, num_crops, flatten_label, ordering)
+
+    def iterator(self, structure, labeled, cropped, ordering='channel_first'):
+        """
+        Create a new iterator over the provided data.
+        Args:
+            structure: Structure of the returned data (sequence, stacked or pair)
+            labeled: Decides if the returned data is labeled
+            cropped: Decides if the returned data is cropped
+            ordering: The way the data is returned, either [..., h, w, c] for channel_last or [..., c, h, w] for channel_first
+        Return:
+            An iterator that yields data in a sequential way (but in the structure that is provided)
+        """
+        assert(len(self.data) == 1) # can only handle one sequence
+        data = self.data[0] # use the whole sequence
+
+        input_shape = (self.input_height, self.input_width)
+        output_shape = (self.output_height, self.output_width)
+
+        seed = np.random.randint(1986512) # equal cropping for the whole data
+        for i in range(len(data) - self.stack_size):
+            files = data[i:i+self.stack_size]
+
+            i_s = input_shape if not cropped else None
+            o_s = output_shape if not cropped else None
+
+            x, y = self.__get_chunk(files, structure, labeled, i_s, o_s)
+            x, y = self.__get_crop(x, y, 1, structure, input_shape, output_shape, seed)
+
+            if labeled and self.ignore_unknown:                    
+                y = y[..., 1:]
+
+            # correct shape and apply ordering
+            x, y = self.__correct_shape(x, y, structure, labeled, ordering, False)
+
+            yield x, y
+
     def __len__(self):
         return int(np.sum([len(seq) // self.stack_size for seq in self.data]))
