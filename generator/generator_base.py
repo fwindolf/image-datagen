@@ -183,6 +183,27 @@ class GeneratorBase():
         
         return x, y
 
+    def __get_crop(self, x, y, num_crops, structure, input_shape, output_shape, seed=None):
+        # crop if necessary
+        if num_crops is not None:
+            seed = np.random.randint(10000) if seed is None else seed # new seed every iteration, but same crops for the stack
+            if structure == 'sequence':
+                # crop along the stack_size dimension
+                cropped = [self.loader._get_crop(x[i], y[i], input_shape, output_shape, seed=seed) for i in range(len(x))]
+                x, y = zip(*cropped)
+                x, y = np.array(x), np.array(y)
+            elif structure == 'stacked':
+                # crop along the stack_size dimension for x
+                cropped = [self.loader._get_crop(x[i], y, input_shape, output_shape, seed=seed) for i in range(len(x))]
+                x, y = zip(*cropped)
+                x, y = np.array(x), np.array(y[0])
+            elif structure == 'pair':
+                x, y = self.loader._get_crop(x, y, input_shape, output_shape, seed=seed)           
+        else:
+            x, y = x, y 
+        
+        return x, y 
+
     def __correct_shape_pair(self, x, y, labeled, ordering, flatten_label):
         """
         Correct the shape of x and y for pair structured data.
