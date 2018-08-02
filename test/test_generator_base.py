@@ -1,8 +1,8 @@
 import unittest
 import numpy as np
 
-from loader.loader_base import LoaderBase
-from generator.generator_base import GeneratorBase
+from universal_datagen.loader.loader_base import LoaderBase
+from universal_datagen.generator.generator_base import GeneratorBase
 
 data_paths = []
 
@@ -70,7 +70,7 @@ class TestGeneratorBaseCreation(unittest.TestCase):
         self.assertEqual(self.ow, self.gen.output_width)
         self.assertEqual(self.nc, self.gen.n_classes)
 
-class TestGeneratorBaseDataAquisition(unittest.TestCase):
+class TestGeneratorBaseDataAquisitionChannelLast(unittest.TestCase):
     def setUp(self):
         self.ih = 30
         self.iw = 20
@@ -119,7 +119,7 @@ class TestGeneratorBaseDataAquisition(unittest.TestCase):
 
     def test_get_sequence_labeled_format(self):
         imgs, lbl = self.gen._get_sequence(self.files, labeled=True)
-
+        
         # sequence format will create stack_size images stacked ontop of each other
         self.assertEqual(imgs.shape, (self.sz, default_height, default_width, n_channels))
         self.assertEqual(lbl.shape, (self.sz, default_height, default_width, self.nc))

@@ -3,7 +3,7 @@ import os
 import cv2
 import glob
 
-from loader.loader_base import LoaderBase
+from universal_datagen.loader.loader_base import LoaderBase
 
 ORIG_SHAPE = (1600, 1600)
 

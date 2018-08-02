@@ -1,10 +1,18 @@
 import unittest
 import numpy as np
 
-from loader.loader_text import AM2018TxtLoader, ORIG_SHAPE
+from universal_datagen.loader.loader_text import AM2018TxtLoader, ORIG_SHAPE
 
-data_paths = ['test/data/text/sim', 'test/data/text/exp']
-txtfiles = ['test/data/text/exp/00000.xyz', 'test/data/text/exp/00001.xyz', 'test/data/text/sim/1.xyz', 'test/data/text/sim/2.xyz'] # exp before sim (alphabetically)
+data_paths = [
+    'universal_datagen/test/data/text/sim', 
+    'universal_datagen/test/data/text/exp'
+]
+txtfiles = [
+    'universal_datagen/test/data/text/exp/00000.xyz',  # exp before sim (alphabetically)
+    'universal_datagen/test/data/text/exp/00001.xyz', 
+    'universal_datagen/test/data/text/sim/1.xyz', 
+    'universal_datagen/test/data/text/sim/2.xyz'
+]
 num_classes = 4 # with unknown
 
 def flatten(array):
