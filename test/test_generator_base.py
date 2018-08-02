@@ -13,15 +13,16 @@ n_channels = 1
 stack_size = 3
 
 class MockLoader(LoaderBase):
-    def __init__(self):
+    def __init__(self, n_channels):
         super().__init__(n_classes, None)
+        self.c = n_channels
 
     def _get_labeled(self, file, input_shape=None, output_shape=None, source='auto'):
         if input_shape is None:
-            input_shape = (default_height, default_width, n_channels)
+            input_shape = (default_height, default_width, self.c)
 
         if len(input_shape) == 2:
-            input_shape = (*input_shape, n_channels)
+            input_shape = (*input_shape, self.c)
         
         if output_shape is None:
             output_shape = (default_height, default_width, n_classes)
@@ -35,10 +36,10 @@ class MockLoader(LoaderBase):
 
     def _get_unlabeled(self, file, input_shape=None, source='auto'):
         if input_shape is None:
-            input_shape = (default_height, default_width, n_channels)
+            input_shape = (default_height, default_width, self.c)
         
         if len(input_shape) == 2:
-            input_shape = (*input_shape, n_channels)
+            input_shape = (*input_shape, self.c)
         
         img = np.random.randint(2, size=input_shape, dtype=np.uint8)
 
@@ -70,7 +71,55 @@ class TestGeneratorBaseCreation(unittest.TestCase):
         self.assertEqual(self.ow, self.gen.output_width)
         self.assertEqual(self.nc, self.gen.n_classes)
 
-class TestGeneratorBaseDataAquisitionChannelLast(unittest.TestCase):
+class TestGeneratorBaseDataAquisitionChannelLastColor(unittest.TestCase):
+    def setUp(self):
+        self.ih = 30
+        self.iw = 20
+        self.c = 2
+        self.sz = stack_size
+
+        self.oh = 50
+        self.ow = 40
+        self.nc = n_classes
+
+        self.gen = GeneratorBase(data_paths, (self.ih, self.iw, self.sz), (self.oh, self.ow, self.nc))
+        self.gen.loader = MockLoader(n_channels=self.c)
+
+        self.files = [None] * (self.sz + 1) # <stack_size + 1> files for <stack_size> images
+    
+    def test_get_stacked_labeled_format(self):
+        imgs, lbl = self.gen._get_stacked(self.files, labeled=True)
+
+        # stacked format will not collapse in the last dimension
+        self.assertEqual(imgs.shape, (self.sz, default_height, default_width, self.c))
+        self.assertEqual(lbl.shape, (default_height, default_width, self.nc))
+
+    def test_get_stacked_unlabeled_format(self):
+        imgs, lbl = self.gen._get_stacked(self.files, labeled=False)
+       
+        # stacked format will not collapse in the last dimension
+        self.assertEqual(imgs.shape, (self.sz, default_height, default_width, self.c))
+        self.assertEqual(lbl.shape, (default_height, default_width, self.c))
+
+    def test_get_stacked_labeled_shape(self):
+        input_shape = (self.ih, self.iw)
+        output_shape = (self.oh, self.ow)
+
+        imgs, lbl = self.gen._get_stacked(self.files, labeled=True, input_shape=input_shape, output_shape=output_shape)
+        # stacked format will collapse in the last dimension, only works on greyscale images
+        self.assertEqual(imgs.shape, (self.sz, self.ih, self.iw, self.c))
+        self.assertEqual(lbl.shape, (self.oh, self.ow, self.nc))
+
+    def test_get_stacked_unlabeled_shape(self):
+        input_shape = (self.ih, self.iw)
+        output_shape = (self.oh, self.ow)
+
+        imgs, lbl = self.gen._get_stacked(self.files, labeled=False, input_shape=input_shape, output_shape=output_shape)
+        # stacked format will collapse in the last dimension, only works on greyscale images
+        self.assertEqual(imgs.shape, (self.sz, self.ih, self.iw, self.c))
+        self.assertEqual(lbl.shape, (self.oh, self.ow, self.c))
+
+class TestGeneratorBaseDataAquisitionChannelLastGreyscale(unittest.TestCase):
     def setUp(self):
         self.ih = 30
         self.iw = 20
@@ -81,7 +130,7 @@ class TestGeneratorBaseDataAquisitionChannelLast(unittest.TestCase):
         self.nc = n_classes
 
         self.gen = GeneratorBase(data_paths, (self.ih, self.iw, self.sz), (self.oh, self.ow, self.nc))
-        self.gen.loader = MockLoader()
+        self.gen.loader = MockLoader(n_channels=1)
 
         self.files = [None] * (self.sz + 1) # <stack_size + 1> files for <stack_size> images
     

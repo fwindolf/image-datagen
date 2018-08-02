@@ -55,6 +55,10 @@ class GeneratorBase():
         # stack all the images up to the last one
         imgs = np.array([self.loader._get_unlabeled(f, input_shape, source='auto')[0] for f in files[:-1]])
         
+        # collapse into last_channel if it is greyscale
+        if imgs.shape[-1] == 1:
+            imgs = np.moveaxis(np.array(np.squeeze(imgs)), 0, -1)
+
         if labeled:             
             # get the label for the next image as label for this sequence
             _, lbl = self.loader._get_labeled(files[-1], input_shape, output_shape, source='auto')
