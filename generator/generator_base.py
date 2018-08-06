@@ -200,15 +200,18 @@ class GeneratorBase():
                 x, y = np.array(x), np.array(y)
             elif structure == 'stacked':
                 # crop along the stack_size dimension for x
+                if len(x.shape) == 3:
+                    # the data has been stacked along the last dimension, so just crop
+                    x, y = self.loader._get_crop(x, y, input_shape, output_shape, seed=seed)
+                else:
+                    # crop along the stack_size dimension for x
                 cropped = [self.loader._get_crop(x[i], y, input_shape, output_shape, seed=seed) for i in range(len(x))]
                 x, y = zip(*cropped)
-                x, y = np.array(x), np.array(y[0])
+                    y = y[0]
             elif structure == 'pair':
                 x, y = self.loader._get_crop(x, y, input_shape, output_shape, seed=seed)           
-        else:
-            x, y = x, y 
         
-        return x, y 
+        return np.array(x), np.array(y) 
 
     def __correct_shape_pair(self, x, y, labeled, ordering, flatten_label):
         """
@@ -263,21 +266,22 @@ class GeneratorBase():
         x_shape = x.shape
         y_shape = y.shape
 
-        assert(x_shape[0] == self.stack_size - 1)
+        if len(x_shape) == 3:
+            assert(x_shape[-1] == self.stack_size - 1) # [h, w, sz]
+        else:
+            assert(x_shape[0] == self.stack_size - 1) # [sz, h, w, nc]
 
-        if len(x_shape) == 3: # channels lost
-            x = x[:, :, :, np.newaxis]
         if not labeled and len(y_shape) == 2:
             y = y[:, :, np.newaxis]
 
-        assert(len(x.shape) == 4) # [sz, h, w, c]
         assert(len(y.shape) == 3) # [h, w, c/classes]
 
-        if x.shape[-1] == 1:
-            x = np.moveaxis(np.squeeze(x), 1, -1) # [sz, h, w, 1] -> [h, w, sz]
-
         if ordering == 'channel_first':
+            if len(x.shape) == 3:
+                x = np.moveaxis(x, -1, 0)
+            else:
             x = np.moveaxis(x, -1, 1)
+
             if not flatten_label:
                 y = np.moveaxis(y, -1, 0)
 
