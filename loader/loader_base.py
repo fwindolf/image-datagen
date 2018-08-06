@@ -68,7 +68,7 @@ class LoaderBase():
             y = np.zeros_like(x)
             unlabeled = True
         
-        assert(len(y.shape) >= 3)        
+        assert(len(y.shape) >= 3)     
         assert(len(x.shape) == 3)
 
         xc, yc = None, None

@@ -197,7 +197,6 @@ class GeneratorBase():
                 # crop along the stack_size dimension
                 cropped = [self.loader._get_crop(x[i], y[i], input_shape, output_shape, seed=seed) for i in range(len(x))]
                 x, y = zip(*cropped)
-                x, y = np.array(x), np.array(y)
             elif structure == 'stacked':
                 # crop along the stack_size dimension for x
                 if len(x.shape) == 3:
@@ -205,11 +204,11 @@ class GeneratorBase():
                     x, y = self.loader._get_crop(x, y, input_shape, output_shape, seed=seed)
                 else:
                     # crop along the stack_size dimension for x
-                cropped = [self.loader._get_crop(x[i], y, input_shape, output_shape, seed=seed) for i in range(len(x))]
-                x, y = zip(*cropped)
+                    cropped = [self.loader._get_crop(x[i], y, input_shape, output_shape, seed=seed) for i in range(len(x))]
+                    x, y = zip(*cropped)
                     y = y[0]
             elif structure == 'pair':
-                x, y = self.loader._get_crop(x, y, input_shape, output_shape, seed=seed)           
+                x, y = self.loader._get_crop(x, y, input_shape, output_shape, seed=seed)  
         
         return np.array(x), np.array(y) 
 
@@ -280,7 +279,7 @@ class GeneratorBase():
             if len(x.shape) == 3:
                 x = np.moveaxis(x, -1, 0)
             else:
-            x = np.moveaxis(x, -1, 1)
+                x = np.moveaxis(x, -1, 1)
 
             if not flatten_label:
                 y = np.moveaxis(y, -1, 0)
@@ -352,7 +351,7 @@ class GeneratorBase():
         else:
             raise AttributeError("Unknow structure : %s" % structure)
 
-    def __generator(self, data, structure, labeled, batch_size, num_crops, flatten_label, ordering='channel_first'):
+    def __generator(self, data, structure, labeled, batch_size, num_crops, flatten_label, ordering):
         """
         Create a new generator for the provided data
         Args:
@@ -382,9 +381,7 @@ class GeneratorBase():
                 x, y = self.__get_chunk(files, structure, labeled, i_s, o_s)
 
                 x_out, y_out = self.__get_crop(x, y, num_crops, structure, input_shape, output_shape)
-
-                x_out, y_out = np.array(x_out), np.array(y_out)
-                
+                                
                 if labeled and self.ignore_unknown:                    
                     y_out = y_out[..., 1:]
 
@@ -396,7 +393,7 @@ class GeneratorBase():
         
             yield np.asarray(X), np.asarray(Y)
 
-    def generator(self, structure, labeled, batch_size, num_crops=None, split=None, flatten_label=False, ordering='channel_first'):
+    def generator(self, structure, labeled, batch_size, num_crops=None, split=None, flatten_label=False, ordering='channel_last'):
         """
         Create a generator or a tuple of generators 
         Args:
@@ -424,7 +421,7 @@ class GeneratorBase():
         else:
             return self.__generator(cycle(data), structure, labeled, batch_size, num_crops, flatten_label, ordering)
 
-    def iterator(self, structure, labeled, cropped, ordering='channel_first'):
+    def iterator(self, structure, labeled, cropped, ordering='channel_last'):
         """
         Create a new iterator over the provided data.
         Args:
