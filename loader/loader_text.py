@@ -8,7 +8,7 @@ from universal_datagen.loader.loader_base import LoaderBase
 ORIG_SHAPE = (1600, 1600)
 RADIUS = 10
 SIM_SCALE = 1000
-SIM_ORIGIN = (800, 1000)
+SIM_ORIGIN = (800, 900)
 SIM_FORMAT = "xyz"
 
 class AM2018TxtLoader(LoaderBase):
@@ -139,13 +139,15 @@ class AM2018TxtLoader(LoaderBase):
             ox, oy = self.origin
             cx, cy = int(self.shape[0]/2), int(self.shape[1]/2)
             
-            if abs(px - ox) > cx - self.radius:
+            if abs(px - ox) > cx: # - self.radius:
                 continue
-            if abs(py - oy) > cy - self.radius:
-                continue
+            if abs(py - oy) > cy: # - self.radius:
+                continue            
 
-            cv2.circle(img, (int(px + cx - ox), int(py + cy - oy)), self.radius, (1, 1, 1), -1)
-            cv2.circle(lbl[int(classes[i])], (int(px + cx - ox), int(py + cy - oy)), self.radius, (1, 1, 1), -1)
+            cv2.circle(img, (int(px + cx - ox), int(py + cy - oy)), self.radius, (1, 1, 1), -1)            
+            c = int(classes[i])
+            if c < self.n_classes:
+                cv2.circle(lbl[int(classes[i])], (int(px + cx - ox), int(py + cy - oy)), self.radius, (1, 1, 1), -1)
 
         # add unknown where there are no pixels
         lbl[0] = 1
