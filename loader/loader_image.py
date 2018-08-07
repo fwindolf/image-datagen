@@ -1,7 +1,8 @@
 import numpy as np 
 import os
-import cv2
 import glob
+
+from PIL import Image
 
 from universal_datagen.loader.loader_base import LoaderBase
 
@@ -71,7 +72,7 @@ class AM2018ImageLoader(LoaderBase):
         Returns:
             An greyscale image with the desired shape
         """
-        img = cv2.imread(file, 0) # 0: greyscale
+        img = np.asarray(Image.open(file).convert('L')) # 0: greyscale
         if img is None:
             return img
         
@@ -93,7 +94,7 @@ class AM2018ImageLoader(LoaderBase):
         Returns:
             An image with n_classes channels and the desired shape
         """
-        trg = cv2.imread(file, 0)
+        trg = Image.open(file)
 
         if trg is None:
             return trg

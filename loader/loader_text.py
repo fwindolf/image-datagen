@@ -1,7 +1,7 @@
 import numpy as np
 import glob
 import os
-import cv2
+from PIL import Image, ImageDraw
 
 from universal_datagen.loader.loader_base import LoaderBase
 
@@ -39,6 +39,21 @@ class AM2018TxtLoader(LoaderBase):
         self.radius = RADIUS
         self.shape = ORIG_SHAPE
         self.format = data_format
+
+    def __to_categorical(self, img):
+        """
+        """
+        # flatten and save shape
+        img = img.ravel() 
+        n = img.shape[0] 
+        
+        categorical = np.zeros((n, self.n_classes), dtype=np.uint8)
+        
+        # Set to 1 everywhere where 
+        categorical[np.arange(n), img] = 1
+        categorical = np.reshape(categorical, (*self.shape, self.n_classes))
+
+        return categorical
 
     def discover_data(self, data_paths, num_data=None):
         """
@@ -80,22 +95,24 @@ class AM2018TxtLoader(LoaderBase):
 
         points = [l[1:3] for l in lines]
         classes = [l[-1] for l in lines]
+       
+        img = Image.new('L', self.shape, color='black')
+        draw_img = ImageDraw.Draw(img)
+        lbl = Image.new('L', self.shape, color='black')
+        draw_lbl = ImageDraw.Draw(lbl)
 
-        img = np.zeros((*self.shape, 1), dtype=np.uint8)
-        lbl = np.zeros((self.n_classes, *self.shape), dtype=np.uint8)
-            
         for i, p in enumerate(points):
             px, py = int(float(p[0])), int(float(p[1]))
-            cv2.circle(img, (px, py), self.radius, (1, 1, 1), -1)
-            cv2.circle(lbl[int(classes[i])], (px, py), self.radius, (1, 1, 1), -1)
+            draw_img.ellipse((px, py, px + 2 * self.radius - 1, py + 2 * self.radius - 1), fill=1)
+            draw_lbl.ellipse((px, py, px + 2 * self.radius - 1, py + 2 * self.radius - 1), fill=int(classes[i]))
 
-        # add unknown where there are no pixels
-        lbl[0] = 1
-        for c in range(1, self.n_classes):
-            lbl[0] = np.clip(lbl[0] - lbl[c], 0, 1) # clip in case something overlaps
+        del draw_img, draw_lbl # destroy objects to draw on
 
-        # make label channel_last
-        lbl = np.moveaxis(lbl, 0, -1)
+        # split into channels
+        img = np.asarray(img, dtype=np.uint8) # 0, 1
+        img = img[..., np.newaxis]
+        lbl = np.asarray(lbl, dtype=np.uint8) # 0 - ?
+        lbl = self.__to_categorical(lbl)
 
         # check if there is labels (-> other classes than 0:unknown)
         if np.count_nonzero(classes) > 0:
@@ -123,8 +140,10 @@ class AM2018TxtLoader(LoaderBase):
         lattice = lattice_line[lattice_line.find('\"') +1:lattice_line.rfind('\"')].split()[0:8:4]
         lattice = float(lattice[0]) * self.scale, float(lattice[1]) * self.scale
 
-        img = np.zeros((*self.shape, 1), dtype=np.uint8)
-        lbl = np.zeros((self.n_classes, *self.shape), dtype=np.uint8)
+        img = Image.new('L', self.shape, color='black')
+        draw_img = ImageDraw.Draw(img)
+        lbl = Image.new('L', self.shape, color='black')
+        draw_lbl = ImageDraw.Draw(lbl)
                
         lines = [l.split() for l in lines[2:]]
         points = [l[1:3] for l in lines]
@@ -143,19 +162,19 @@ class AM2018TxtLoader(LoaderBase):
                 continue
             if abs(py - oy) > cy: # - self.radius:
                 continue            
+            
+            pxc, pyc = int(px + cx - ox), int(py + cy - oy)
+            
+            draw_img.ellipse((pxc, pyc, pxc + 2 * self.radius - 1, pyc + 2 * self.radius - 1), fill=1)
+            draw_lbl.ellipse((pxc, pyc, pxc + 2 * self.radius - 1, pyc + 2 * self.radius - 1), fill=int(classes[i]))
 
-            cv2.circle(img, (int(px + cx - ox), int(py + cy - oy)), self.radius, (1, 1, 1), -1)            
-            c = int(classes[i])
-            if c < self.n_classes:
-                cv2.circle(lbl[int(classes[i])], (int(px + cx - ox), int(py + cy - oy)), self.radius, (1, 1, 1), -1)
+        del draw_img, draw_lbl
 
-        # add unknown where there are no pixels
-        lbl[0] = 1
-        for c in range(1, self.n_classes):
-            lbl[0] = np.clip(lbl[0] - lbl[c], 0, 1) # clip in case something overlaps
-        
-        # make label channel_last ordering
-        lbl = np.moveaxis(lbl, 0, -1)
+        # split into channels
+        img = np.asarray(img, dtype=np.uint8) # 0, 1
+        img = img[..., np.newaxis]
+        lbl = np.asarray(lbl, dtype=np.uint8) # 0 - ?
+        lbl = self.__to_categorical(lbl)
 
         # simulation data comes out horizontally flipped (y axis bottom-left corner)
         img = np.flip(img, 0)        
@@ -201,7 +220,7 @@ class AM2018TxtLoader(LoaderBase):
 
         if lbl is None:
             raise RuntimeError("File %s does not contain any labels!" % txtfile)
-        
+
         # transform to desired shape
         if input_shape is not None:
             img = self._resize(img, input_shape)        

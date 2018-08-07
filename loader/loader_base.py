@@ -1,6 +1,6 @@
 import numpy as np 
 import os
-import cv2
+from PIL import Image
 import glob
 
 class LoaderBase():
@@ -31,11 +31,24 @@ class LoaderBase():
         assert(len(output_shape) == 2) # exactly h, w
         assert(img.dtype == np.uint8 or img.dtype == np.float)
         
-        s_before = len(img.shape)       
+        s_before = len(img.shape)  
+        channels = img.shape[-1]     
         new_height = output_shape[0]
         new_width = output_shape[1]
-        # resize takes (new_width, new_height) as shape        
-        img = cv2.resize(img, (new_width, new_height))
+
+        img = Image.fromarray(np.squeeze(img))
+        bands = img.split()
+        bands = [b.resize((new_height, new_width), Image.LINEAR) for b in bands]
+        # resize to (new_height, new_width)        
+        if channels == 1:
+            img = Image.merge('L', bands)
+        elif channels == 3:
+            img = Image.merge('RGB', bands)
+        elif channels == 4:
+            img = Image.merge('RGBA', bands)
+
+        img = np.asarray(img)
+
         # check if shape got collapsed, reinflate if necessary
         if s_before > len(img.shape):
             img = img[:, :, np.newaxis]
