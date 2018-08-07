@@ -8,7 +8,11 @@ from universal_datagen.loader.loader_base import LoaderBase
 ORIG_SHAPE = (1600, 1600)
 RADIUS = 10
 SIM_SCALE = 1000
-SIM_ORIGIN = (800, 900)
+SIM_ORIGIN = {
+    1200 : (800, 800), 
+    2700 : (800, 950), 
+    5400 : (800, 1100)
+}
 SIM_FORMAT = "xyz"
 
 class AM2018TxtLoader(LoaderBase):
@@ -136,6 +140,7 @@ class AM2018TxtLoader(LoaderBase):
         with open(txtfile, 'r') as f:
             lines = f.readlines()
 
+        num_particles = int(lines[0])
         lattice_line = lines[1]
         lattice = lattice_line[lattice_line.find('\"') +1:lattice_line.rfind('\"')].split()[0:8:4]
         lattice = float(lattice[0]) * self.scale, float(lattice[1]) * self.scale
@@ -154,15 +159,18 @@ class AM2018TxtLoader(LoaderBase):
             px = float(p[0]) * self.scale
             py = float(p[1]) * self.scale
             
-            # crop window with ORIG_SHAPE aroudn SIM_ORIGIN
-            ox, oy = self.origin
+            
+            # get entry closest to num_particles
+            ox, oy = self.origin.get(num_particles, self.origin[min(self.origin.keys(), key=lambda k: abs(k - num_particles))]) 
             cx, cy = int(self.shape[0]/2), int(self.shape[1]/2)
             
-            if abs(px - ox) > cx: # - self.radius:
+            # crop window with ORIG_SHAPE around SIM_ORIGIN           
+            if abs(px - ox) > cx: 
                 continue
-            if abs(py - oy) > cy: # - self.radius:
+            if abs(py - oy) > cy: 
                 continue            
             
+            # only paint particles that are visible
             pxc, pyc = int(px + cx - ox), int(py + cy - oy)
             
             draw_img.ellipse((pxc, pyc, pxc + 2 * self.radius - 1, pyc + 2 * self.radius - 1), fill=1)
