@@ -46,7 +46,14 @@ class AM2018TxtLoader(LoaderBase):
 
     def __to_categorical(self, img):
         """
+        Create a categorical version of the input which has non-overlapping classes.
+        For each channel, only the areas where the class is active are 1, else 0.
+        Args:
+            img: The condensed image with dimensions [h, w]
+        Returns:
+            An image [h, w, c] that has class activations split in channels 
         """
+        assert(len(img.shape) == 2)
         # flatten and save shape
         img = img.ravel() 
         n = img.shape[0] 
@@ -139,7 +146,7 @@ class AM2018TxtLoader(LoaderBase):
         """
         with open(txtfile, 'r') as f:
             lines = f.readlines()
-
+        
         num_particles = int(lines[0])
         lattice_line = lines[1]
         lattice = lattice_line[lattice_line.find('\"') +1:lattice_line.rfind('\"')].split()[0:8:4]
@@ -167,7 +174,7 @@ class AM2018TxtLoader(LoaderBase):
             # crop window with ORIG_SHAPE around SIM_ORIGIN           
             if abs(px - ox) > cx: 
                 continue
-            if abs(py - oy) > cy: 
+            if abs(py - oy) > cy + self.radius: 
                 continue            
             
             # only paint particles that are visible
