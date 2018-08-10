@@ -7,7 +7,7 @@ class AM2018TxtGenerator(GeneratorBase):
     """
     def __init__(self, data_paths, image_dims, label_dims, crop_scale=None, ignore_unknown=False, num_data=None):
         """
-        Create a new data generator base.
+        Create a text data generator by aggregating the txt loader.
          Args:
             data_paths: The paths where the data can be found. Each path should contain files with increasing numbers from one sequence.
             image_dims: The dimensions of generated image data in (height, width, channels) format, with channels being the number of images stacked together.
@@ -22,5 +22,3 @@ class AM2018TxtGenerator(GeneratorBase):
         n_classes = label_dims[-1]
         self.loader = AM2018TxtLoader(n_classes, crop_scale)
         self.data = self.loader.discover_data(data_paths, num_data)
-
-    
