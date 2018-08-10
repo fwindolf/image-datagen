@@ -174,7 +174,7 @@ class AM2018TxtLoader(LoaderBase):
             # crop window with ORIG_SHAPE around SIM_ORIGIN           
             if abs(px - ox) > cx: 
                 continue
-            if abs(py - oy) > cy + self.radius: 
+            if abs(py - oy) > cy: 
                 continue            
             
             # only paint particles that are visible
