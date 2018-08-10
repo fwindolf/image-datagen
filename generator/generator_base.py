@@ -104,26 +104,26 @@ class GeneratorBase():
     
     def _get_pair(self, files, labeled, input_shape=None, output_shape=None):
         """
-        Get a pair of either an image and the label with offset 1, or two sequential images.
+        Get a pair of an image and either the label or unlabeled image without offset
         Args:
-            files: Two files that the loader can make sense of 
-            labeled: Set to True to return a label for the image, else the next image will be returned as label
+            files: One files that the loader can make sense of 
+            labeled: Set to True to return a label for the image, else the same image will be returned as label
             input_shape: The (h, w) of the returned images
             output_shape: The (h, w) of the returned label
         Return:
             A pair of an image [input_shape x channels] and a label [output_shape x n_classes] or 
             [output_shape x 1] for unlabeled
         """
-        assert(len(files) == 2) # one for image, one for label/next image
+        assert(len(files) <= 2) # we use only one file
 
-        img, _ = self.loader._get_unlabeled(files[0], input_shape, source='auto')
-        unlbl, lbl = self.loader._get_labeled(files[-1], output_shape, output_shape, source='auto')
-        
         if labeled:
-            return np.asarray(img), np.asarray(lbl)
+            img, lbl = self.loader._get_labeled(files[0], input_shape, output_shape, source='auto')
         else:
-            return np.asarray(img), np.asarray(unlbl)
-
+            img, _ = self.loader._get_unlabeled(files[0], input_shape, source='auto')
+            _, lbl = self.loader._get_unlabeled(files[0], output_shape, source='auto')
+        
+        return np.asarray(img), np.asarray(lbl)        
+    
     def __chunks(self, data, size):
         """
         Generate chunks of size from array data and throw away incomplete chunks
