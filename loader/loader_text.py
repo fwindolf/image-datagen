@@ -167,15 +167,14 @@ class AM2018TxtLoader(LoaderBase):
             px = float(p[0]) * self.scale
             py = float(p[1]) * self.scale
             
-            
             # get entry closest to num_particles
             ox, oy = self.origin.get(num_particles, self.origin[min(self.origin.keys(), key=lambda k: abs(k - num_particles))]) 
             cx, cy = int(self.shape[0]/2), int(self.shape[1]/2)
             
-            # crop window with ORIG_SHAPE around SIM_ORIGIN           
-            if abs(px - ox) > cx: 
+            # crop window with ORIG_SHAPE around SIM_ORIGIN
+            if abs(px + 2 * self.radius - ox) > cx: 
                 continue
-            if abs(py - oy) > cy: 
+            if abs(py + 2 * self.radius - oy) > cy: 
                 continue            
             
             # only paint particles that are visible
