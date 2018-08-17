@@ -17,33 +17,21 @@ class MockLoader(LoaderBase):
         super().__init__(n_classes, None)
         self.c = n_channels
 
-    def _get_labeled(self, file, input_shape=None, output_shape=None, source='auto'):
-        if input_shape is None:
-            input_shape = (default_height, default_width, self.c)
+    def _get_image(self, file, shape, source='auto'):
+        if shape is None:
+            shape = (default_height, default_width, self.c)
+        elif len(shape) == 2:
+            shape = (*shape, self.c)
 
-        if len(input_shape) == 2:
-            input_shape = (*input_shape, self.c)
-        
-        if output_shape is None:
-            output_shape = (default_height, default_width, n_classes)
-        
-        if len(output_shape) == 2:
-            output_shape = (*output_shape, n_classes)
-        
-        img = np.random.randint(2, size=input_shape, dtype=np.uint8)
-        lbl = np.random.randint(n_classes, size=output_shape, dtype=np.uint8)
-        return img, lbl
+        return np.random.randint(2, size=shape, dtype=np.uint8)
 
-    def _get_unlabeled(self, file, input_shape=None, source='auto'):
-        if input_shape is None:
-            input_shape = (default_height, default_width, self.c)
-        
-        if len(input_shape) == 2:
-            input_shape = (*input_shape, self.c)
-        
-        img = np.random.randint(2, size=input_shape, dtype=np.uint8)
+    def _get_label(self, file, shape, source='auto'):
+        if shape is None:
+            shape = (default_height, default_width, n_classes)
+        elif len(shape) == 2:
+            shape = (*shape, n_classes)
 
-        return img, None
+        return np.random.randint(n_classes, size=shape, dtype=np.uint8)
 
 class TestGeneratorBaseCreation(unittest.TestCase):
     def setUp(self):
@@ -65,7 +53,7 @@ class TestGeneratorBaseCreation(unittest.TestCase):
         
         self.assertEqual(self.ih, self.gen.input_height)
         self.assertEqual(self.iw, self.gen.input_width)
-        self.assertEqual(self.sz + 1, self.gen.stack_size)
+        self.assertEqual(self.sz, self.gen.stack_size)
 
         self.assertEqual(self.oh, self.gen.output_height)
         self.assertEqual(self.ow, self.gen.output_width)

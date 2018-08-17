@@ -41,55 +41,45 @@ class TestImageLoader(unittest.TestCase):
         with  self.assertRaises(AttributeError):
             self.loader._get_labeled(files[0], source='wrong')
 
-    def test_get_labeled_data(self):
-        img, lbl = self.loader._get_labeled(files[0])
+    def test_get_image(self):
+        img = self.loader._get_image(files[0], shape=None, source='auto')
 
         # default dimensions
         self.assertEqual(img.shape[:2], (self.default_height, self.default_width))
-        self.assertEqual(lbl.shape[:2], (self.default_height, self.default_width))
-
         # right datatype
         self.assertIn(img.dtype, [np.float, np.uint8])
-        self.assertIn(lbl.dtype, [np.float, np.uint8])
-
         # not empty
         self.assertGreater(np.count_nonzero(img), 0)
-        self.assertGreater(np.count_nonzero(lbl), 0)
+
+    def test_get_image_shape(self):
+        img = self.loader._get_image(files[0], shape=self.input_shape, source='auto')
+
+        # right dimensions
+        self.assertEqual(img.shape[:2], self.input_shape)
+        # right datatype
+        self.assertIn(img.dtype, [np.float, np.uint8])
+        # not empty
+        self.assertGreater(np.count_nonzero(img), 0)
     
-    def test_get_labeled_data_shape(self):
-        img, lbl = self.loader._get_labeled(files[0], input_shape=self.input_shape, output_shape=self.output_shape)
-
-        # right dimensions
-        self.assertEqual(img.shape[:2], self.input_shape)
-        self.assertEqual(lbl.shape[:2], self.output_shape)
-
-        # not empty
-        self.assertGreater(np.count_nonzero(img), 0)
-        self.assertGreater(np.count_nonzero(lbl), 0)
-
-    def test_get_unlabeled_data(self):
-        img, lbl = self.loader._get_unlabeled(files[1])
-
-        # no label
-        self.assertIsNone(lbl)
+    def test_get_label(self):
+        lbl = self.loader._get_label(files[0], shape=None, source='auto')
 
         # default dimensions
-        self.assertEqual(img.shape[:2], (self.default_height, self.default_width))
-
+        self.assertEqual(lbl.shape[:2], (self.default_height, self.default_width))
         # right datatype
-        self.assertIn(img.dtype, [np.float, np.uint8])
-        
+        self.assertIn(lbl.dtype, [np.float, np.uint8])
         # not empty
-        self.assertGreater(np.count_nonzero(img), 0)
-
-    def test_get_unlabeled_data_shape(self):
-        img, lbl = self.loader._get_unlabeled(files[1], input_shape=self.input_shape)
-
-        # no label
-        self.assertIsNone(lbl)
-
-        # right dimensions
-        self.assertEqual(img.shape[:2], self.input_shape)
-
+        self.assertGreater(np.count_nonzero(lbl), 0)
+        # right number of classes
+        self.assertEqual(lbl.shape[-1], num_classes)
+   
+    def test_get_label_shape(self):
+        lbl = self.loader._get_label(files[0], shape=self.output_shape, source='auto')
+        # default dimensions
+        self.assertEqual(lbl.shape[:2], self.output_shape)
+        # right datatype
+        self.assertIn(lbl.dtype, [np.float, np.uint8])
         # not empty
-        self.assertGreater(np.count_nonzero(img), 0)
+        self.assertGreater(np.count_nonzero(lbl), 0)
+        # right number of classes
+        self.assertEqual(lbl.shape[-1], num_classes)

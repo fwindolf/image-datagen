@@ -10,7 +10,7 @@ class TestLoaderBaseResize(unittest.TestCase):
         self.loader_base = LoaderBase(num_classes, crop_scale)
 
     def test_dimensions_height(self):
-        in_shape = (10, 10, 2)
+        in_shape = (10, 10, 4)
         out_shape = (20, 10)
         img = np.ones(in_shape)
         
@@ -22,7 +22,7 @@ class TestLoaderBaseResize(unittest.TestCase):
         self.assertEqual(img_resized.shape[2], in_shape[2])
     
     def test_dimensions_width(self):
-        in_shape = (10, 10, 2)
+        in_shape = (10, 10, 4)
         out_shape = (10, 20)
         img = np.ones(in_shape)
         
@@ -51,27 +51,22 @@ class TestLoaderBaseCrop(unittest.TestCase):
         crop_scale = None
         self.loader_base = LoaderBase(num_classes, crop_scale)
 
-    def test_crop_works(self):
-        im_shape = (90, 100, 1)
-        lb_shape = (70, 80, 3)
+    def test_crop_dimensions(self):
+        for n in range(1, 20):
+            im_shape = (90, 100, n)
+            lb_shape = (70, 80, n)
+            
+            im_shape_crop = (20, 30)
+            lb_shape_crop = (40, 50)
         
-        im_shape_crop = (20, 30)
-        lb_shape_crop = (40, 50)
-        
-        im = np.ones(im_shape)
-        lb = np.ones(lb_shape)
+            im = np.ones(im_shape)
+            lb = np.ones(lb_shape)
 
-        im_crop, lb_crop = self.loader_base._get_crop(im, lb, im_shape_crop, lb_shape_crop)
+            im_crop, lb_crop = self.loader_base._get_crop(im, lb, im_shape_crop, lb_shape_crop)
 
-        # im crop dimensions
-        self.assertEqual(im_crop.shape[:2], im_shape_crop[:2])
-        # im crop channels
-        self.assertEqual(im_crop.shape[2], im_shape[2])
-
-        # lb crop dimensions
-        self.assertEqual(lb_crop.shape[:2], lb_shape_crop[:2])
-        # im crop channels
-        self.assertEqual(lb_crop.shape[2], lb_shape[2])
+            # crop dimensions
+            self.assertEqual(im_crop.shape, (*im_shape_crop, n))
+            self.assertEqual(lb_crop.shape, (*lb_shape_crop, n))            
     
     def test_crop_seed(self):
         im_shape = (100, 100, 1)
