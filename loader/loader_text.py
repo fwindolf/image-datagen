@@ -80,11 +80,12 @@ class AM2018TxtLoader(LoaderBase):
             # sort files by filename interpreted as int
             files = sorted(glob.glob(os.path.join(path, "*.%s" % self.format)), key=lambda x: int(x[x.rfind('/') + 1:x.rfind('.')]))
             if num_data is not None:
-                assert(num_data > 0)
+                assert(num_data > 0)                
                 max_idx = max(1, int(num_data/ len(data_paths))) # make it so we have num_data files evenly distributed among data_paths
                 files = files[:max_idx]
 
             data.append(files) # new array for each sequence, so data is like this [[...], [...], ...]
+        
         
         return data
     
@@ -220,6 +221,56 @@ class AM2018TxtLoader(LoaderBase):
         else:
             return None, None
 
+    def _get_image(self, file, shape, source='auto'):
+        """
+        Get the files image content.
+
+        Args:
+            file: File containing the data
+            shape: Shape of the data
+            source: Data source modifier
+        Return:
+            An image of <shape> dimension
+        """
+        if source == 'simulation':
+            img, _ = self.__generate_from_simulation(file)
+        elif source == 'experiment':
+            img, _ = self.__generate_from_experimental(file)
+        elif source == 'auto':
+            img, _ = self.__generate_autodiscover(file)
+        else:
+            raise AttributeError("Unknown source: %s" % source)
+        
+        if shape is not None:
+            img = self._resize(img, shape)        
+
+        return img
+
+    def _get_label(self, file, shape, source='auto'):
+        """
+        Get the files label content
+
+        Args:
+            file: File containing the data
+            shape: Shape of the data
+            source: Data source modifier
+        Return:
+            An label of <shape> dimension
+        """
+        if source == 'simulation':
+            _, lbl = self.__generate_from_simulation(file)
+        elif source == 'experiment':
+            _, lbl = self.__generate_from_experimental(file)
+        elif source == 'auto':
+            _, lbl = self.__generate_autodiscover(file)
+        else:
+            raise AttributeError("Unknown source: %s" % source)
+
+        if shape is not None:
+            lbl = self._resize(lbl, shape)
+        
+        return lbl
+
     def _get_labeled(self, txtfile, input_shape=None, output_shape=None, source='auto'):
         """
         Get the content of the txtfile as labeled data in the specified shape.
@@ -243,23 +294,4 @@ class AM2018TxtLoader(LoaderBase):
             lbl = self._resize(lbl, output_shape)
     
         return img, lbl
-
-    def _get_unlabeled(self, txtfile, input_shape=None, source='auto'):
-        """
-        Get the content of the txtfile as unlabeled data in the specified shape.
-        """
-        if source == 'simulation':
-            img, _ = self.__generate_from_simulation(txtfile)
-        elif source == 'experiment':
-            img, _ = self.__generate_from_experimental(txtfile)
-        elif source == 'auto':
-            img, _ = self.__generate_autodiscover(txtfile)
-        else:
-            raise AttributeError("Unknown source: %s" % source)
-
-        if input_shape is not None:
-            img = self._resize(img, input_shape)
-        
-        return img, None
-    
     

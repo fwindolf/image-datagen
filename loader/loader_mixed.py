@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw
 
 from universal_datagen.loader.loader_base import LoaderBase
 from universal_datagen.loader.loader_text import AM2018TxtLoader
-from universal_datagen.loader.loader_image import AM2018ImageLoader
+from universal_datagen.loader.loader_image import ImageLoader
 
 TXT_FOLDER = "txt"
 
@@ -20,7 +20,7 @@ class AM2018MixedLoader(LoaderBase):
         super().__init__(num_classes, crop_scale)
 
         self.txt_loader = AM2018TxtLoader(num_classes, crop_scale)
-        self.img_loader = AM2018ImageLoader(crop_scale)
+        self.img_loader = ImageLoader(num_classes, crop_scale, img_folder='images', img_format='jpg', trg_folder='images', trg_format='jpg')
 
         self.txt_folder = txt_folder
 
@@ -60,26 +60,21 @@ class AM2018MixedLoader(LoaderBase):
         """
         Crop the input image to shape
         """
-        return image[0:shape[0], 0:shape[0], np.newaxis]
+        return image[0:shape[0], 0:shape[0]]
 
-    def _get_labeled(self, file, input_shape=None, output_shape=None, source='auto'):
+    def _get_image(self, file, shape=None, source='auto'):
         """
-        Get a real image as input and an abstracted (generated) image with classes as label.
+        Get a real image from the file placeholder
         """
-        img, _ = self.img_loader._get_unlabeled(file, input_shape, source)
-        _, trg = self.txt_loader._get_labeled(file % (self.txt_folder, self.txt_loader.format), input_shape, output_shape, source) 
-
+        img = self.img_loader._get_image(file, shape, source)
         img = self.__crop_image(img, self.txt_loader.shape)
         
-        return img, trg
+        return img
 
-    def _get_unlabeled(self, file, input_shape=None, source='auto'):
+    def _get_label(self, file, shape=None, source='auto'):
         """
-        Get a real image as input and an abstracted image without classification information as label.
+        Get an abstracted image as label.
         """
-        img, _ = self.img_loader._get_unlabeled(file, input_shape, source)
-        trg, _ = self.txt_loader._get_unlabeled(file % (self.txt_folder, self.txt_loader.format), input_shape, source) 
-
-        img = self.__crop_image(img, self.txt_loader.shape)
-
-        return img, trg
+        file = file % ('txt', 'xyz')
+        lbl = self.txt_loader._get_image(file, shape, source)
+        return lbl

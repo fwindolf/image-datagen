@@ -31,29 +31,24 @@ class LoaderBase():
         assert(len(output_shape) == 2) # exactly h, w
         assert(img.dtype == np.uint8 or img.dtype == np.float)
         
-        s_before = len(img.shape)  
+        if len(img.shape) == 2:
+            img = img[..., np.newaxis]
+
         channels = img.shape[-1]     
         new_height = output_shape[0]
         new_width = output_shape[1]
 
-        img = Image.fromarray(np.squeeze(img))
-        bands = img.split()
-        bands = [b.resize((new_height, new_width), Image.LINEAR) for b in bands]
-        # resize to (new_height, new_width)        
-        if channels == 1:
-            img = Image.merge('L', bands)
-        elif channels == 3:
-            img = Image.merge('RGB', bands)
-        elif channels == 4:
-            img = Image.merge('RGBA', bands)
+        img_out = np.empty((new_height, new_width, channels), dtype=img.dtype)
 
-        img = np.asarray(img)
-
-        # check if shape got collapsed, reinflate if necessary
-        if s_before > len(img.shape):
-            img = img[:, :, np.newaxis]
-
-        return img 
+        for c in range(channels):
+            # interpret every channel as greyscale
+            img_c = Image.fromarray(np.squeeze(img[..., c]), 'L') 
+            # resize to shape in format (width, height)
+            img_c = img_c.resize((new_width, new_height), Image.BILINEAR)             
+            img_out[..., c] = np.array(img_c)
+        
+        assert(img_out.shape == (new_height, new_width, channels))
+        return img_out
     
     def _get_crop(self, x, y, x_shape, y_shape, unlabeled=False, seed=None):
         """
@@ -86,7 +81,7 @@ class LoaderBase():
 
         xc, yc = None, None
         h_new, w_new = x_shape
-        
+              
         if y_shape:
             h_out, w_out = y_shape
         else:
@@ -103,8 +98,9 @@ class LoaderBase():
         hy, wy = y.shape[:2]
 
         # make same dimensions so cropping is easier
-        if hy != h or wy != w:
+        if hy != h or wy != w:            
             y = self._resize(y, (h, w))
+            assert(x.shape == y.shape)
 
         # If the current height is smaller than the desired, dont crop...
         if h_new >= h:
@@ -136,8 +132,24 @@ class LoaderBase():
         
         return xc, yc
 
-    def _get_labeled(self, file, input_shape=None, output_shape=None, source='auto'):
+    def _get_image(self, file, shape, source='auto'):
         raise NotImplementedError("Implement this method in a base class")
     
-    def _get_unlabeled(self, file, input_shape=None, source='auto'):
+    def _get_label(self, file, shape, source='auto'):
         raise NotImplementedError("Implement this method in a base class")
+
+    def _get_labeled(self, file, input_shape=None, output_shape=None, source='auto'):
+        """
+        Get the files content as labeled and unlabeled data.
+
+        Args:
+            file: File containing the data
+            input_shape: Shape of the image
+            output_shape: Shape of the label
+            source: Data source modifier
+        Return:
+            A tuple of image and label from the file
+        """
+        img = self._get_image(file, input_shape, source)
+        lbl = self._get_label(file, output_shape, source)
+        return img, lbl
