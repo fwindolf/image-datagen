@@ -100,7 +100,7 @@ class LoaderBase():
         # make same dimensions so cropping is easier
         if hy != h or wy != w:            
             y = self._resize(y, (h, w))
-            assert(x.shape == y.shape)
+            assert(x.shape[:2] == y.shape[:2])
 
         # If the current height is smaller than the desired, dont crop...
         if h_new >= h:
