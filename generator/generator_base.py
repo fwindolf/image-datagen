@@ -8,13 +8,14 @@ class GeneratorBase():
 
     Internally, all image data is handeled in channel_last format.
     """
-    def __init__(self, data_paths, image_dims, label_dims, ignore_unknown=False, num_data=None):
+    def __init__(self, data_paths, image_dims, label_dims, offset=1, ignore_unknown=False, num_data=None):
         """
         Create a new data generator base.
          Args:
             data_paths: The paths where the data can be found. Each path should contain files with increasing numbers from one sequence.
             image_dims: The dimensions of generated image data in (height, width, channels) format, with channels being the number of images stacked together.
-            output_dims: The dimensions of generated label data in (height, width, n_classes) format, with n_classes including background (0) class
+            label_dims: The dimensions of generated label data in (height, width, n_classes) format, with n_classes including background (0) class
+            offset: The offset between images and labels
             ignore_unknown: Flag to ignore the first class (0) in the data. This will produce output (target) data with n_classes - 1 channels.
             num_data: Artificially reduce the number of data points to use.
         """
@@ -23,10 +24,11 @@ class GeneratorBase():
         
         self.data_paths = data_paths
         self.num_data = num_data
+        self.offset = offset
 
         self.input_height = image_dims[0]
         self.input_width = image_dims[1]
-        self.stack_size = image_dims[2] + 1 # make up for dropping one data point for offset
+        self.stack_size = image_dims[2]
 
         self.output_height = label_dims[0]
         self.output_width = label_dims[1]
@@ -52,26 +54,25 @@ class GeneratorBase():
         """
         assert(len(files) > 1) # Must be more than one to get a label
 
-        # stack all the images up to the last one
-        imgs = np.array([self.loader._get_unlabeled(f, input_shape, source='auto')[0] for f in files[:-1]])
-
-        # collapse into last_channel if it is greyscale
+        # get stack_size images, so stop before offset, collapse in last dimension if greyscale
+        imgs = np.array([self.loader._get_image(f, input_shape, source='auto') for f in files[:self.stack_size]])
         if imgs.shape[-1] == 1:
             imgs = np.moveaxis(np.array(np.squeeze(imgs)), 0, -1)
 
+        # get the label at offset
         if labeled:             
             # get the label for the next image as label for this sequence
-            _, lbl = self.loader._get_labeled(files[-1], input_shape, output_shape, source='auto')
+            lbl = self.loader._get_label(files[-1], output_shape, source='auto')
         else:
             # get the next image and provide it as label of this sequence
-            lbl, _ = self.loader._get_unlabeled(files[-1], output_shape, source='auto')
+            lbl = self.loader._get_image(files[-1], output_shape, source='auto')
         
         return np.asarray(imgs), np.asarray(lbl)
 
     def _get_sequence(self, files, labeled, input_shape=None, output_shape=None):
         """
         Get the image data for a number of files, with a sequence of labels or image data.
-        The labels have a temporal offset of 1.
+        The labels have a temporal offset.
         Args:
             files: Any number of files that the loader can make sense of 
             labeled: Set to True to return a label for the sequence, else a image will be returned as label
@@ -87,16 +88,15 @@ class GeneratorBase():
             data = [self.loader._get_labeled(f, input_shape, output_shape, source='auto') for f in files]
             imgs, lbls = zip(*data)
             # from the beginning for inputs
-            imgs = [img for img in imgs[:-1]]
+            imgs = [img for img in imgs[:self.stack_size]]
             # offset 1 for the targets
-            lbls = [lbl for lbl in lbls[1:]]
-        else:
-            data = [self.loader._get_unlabeled(f, input_shape, source='auto') for f in files]
-            data, _ = zip(*data) # extract only the images
+            lbls = [lbl for lbl in lbls[self.offset:]]
+        else:            
+            data = [self.loader._get_image(f, input_shape, source='auto') for f in files]
             # from the beginning for inputs
-            imgs = [img for img in data[:-1]]
+            imgs = [img for img in data[:self.stack_size]]
             # offset 1 for the targets
-            lbls = [lbl for lbl in data[1:]]
+            lbls = [lbl for lbl in data[self.offset:]]
             if output_shape is not None:
                 lbls = [self.loader._resize(np.array(lbl), output_shape) for lbl in lbls]
             
@@ -114,13 +114,12 @@ class GeneratorBase():
             A pair of an image [input_shape x channels] and a label [output_shape x n_classes] or 
             [output_shape x 1] for unlabeled
         """
-        assert(len(files) <= 2) # we use only one file
-
+        img = self.loader._get_image(files[0], input_shape, source='auto')
+        
         if labeled:
-            img, lbl = self.loader._get_labeled(files[0], input_shape, output_shape, source='auto')
+            lbl = self.loader._get_label(files[-1], output_shape, source='auto')
         else:
-            img, _ = self.loader._get_unlabeled(files[0], input_shape, source='auto')
-            _, lbl = self.loader._get_unlabeled(files[0], output_shape, source='auto')
+            lbl = self.loader._get_image(files[-1], output_shape, source='auto')            
         
         return np.asarray(img), np.asarray(lbl)        
     
@@ -152,7 +151,7 @@ class GeneratorBase():
         data = []
         # generate arrays of stack_size for all sequences
         for seq in self.data:
-            data.extend([chunk for chunk in self.__chunks(seq, self.stack_size)])
+            data.extend([chunk for chunk in self.__chunks(seq, self.stack_size + self.offset)])
 
         if shuffled:
             data = np.random.permutation(data)
@@ -266,9 +265,9 @@ class GeneratorBase():
         y_shape = y.shape
 
         if len(x_shape) == 3:
-            assert(x_shape[-1] == self.stack_size - 1) # [h, w, sz]
+            assert(x_shape[-1] == self.stack_size) # [h, w, sz]
         else:
-            assert(x_shape[0] == self.stack_size - 1) # [sz, h, w, nc]
+            assert(x_shape[0] == self.stack_size) # [sz, h, w, nc]
 
         if not labeled and len(y_shape) == 2:
             y = y[:, :, np.newaxis]
@@ -306,8 +305,8 @@ class GeneratorBase():
         x_shape = x.shape
         y_shape = y.shape
 
-        assert(x_shape[0] == self.stack_size - 1)
-        assert(y_shape[0] == self.stack_size - 1)
+        assert(x_shape[0] == self.stack_size)
+        assert(y_shape[0] == self.stack_size)
 
         if len(x_shape) == 3: # channels lost
             x = x[:, :, :, np.newaxis]
@@ -439,12 +438,12 @@ class GeneratorBase():
         output_shape = (self.output_height, self.output_width)
 
         seed = np.random.randint(1986512) # equal cropping for the whole data
-        for i in range(len(data) - self.stack_size):
+        for i in range(len(data) - (self.stack_size - 1)):
             files = data[i:i+self.stack_size]
 
             i_s = input_shape if not cropped else None
             o_s = output_shape if not cropped else None
-
+            
             x, y = self.__get_chunk(files, structure, labeled, i_s, o_s)
             x, y = self.__get_crop(x, y, 1, structure, input_shape, output_shape, seed)
 
@@ -453,7 +452,7 @@ class GeneratorBase():
 
             # correct shape and apply ordering
             x, y = self.__correct_shape(x, y, structure, labeled, ordering, False)
-
+            
             yield x, y
 
     def __len__(self):
