@@ -443,9 +443,10 @@ class GeneratorBase():
 
             i_s = input_shape if not cropped else None
             o_s = output_shape if not cropped else None
+            num_crops = None if not cropped else 1
             
             x, y = self.__get_chunk(files, structure, labeled, i_s, o_s)
-            x, y = self.__get_crop(x, y, 1, structure, input_shape, output_shape, seed)
+            x, y = self.__get_crop(x, y, num_crops, structure, input_shape, output_shape, seed)
 
             if labeled and self.ignore_unknown:                    
                 y = y[..., 1:]
