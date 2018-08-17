@@ -212,5 +212,18 @@ class AM2018ImageLoader(ImageLoader):
         super().__init__(classes, crop_scale, img_folder, img_format, trg_folder, trg_format)
 
 
-        return img, None
 
+class BubblesImageLoader(ImageLoader):
+    """
+    A loader that can handle AM2018 based image data
+    """
+    def __init__(self, classes=1, crop_scale=None, img_folder='.', img_format='png', trg_folder='.', trg_format='png'):
+        """
+        Args:
+            crop_scale: Factor with which the images are scaled before cropping. (< 1 for more area covered)
+            img_folder: The name of the folder in which the images are found in the data_paths
+            img_format: The file endings of valid images
+            trg_folder: The name of the folder in which the target images are found in the data_paths
+            trg_format: The file endings of valid target images
+        """
+        super().__init__(classes, crop_scale, img_folder, img_format, trg_folder, trg_format)
