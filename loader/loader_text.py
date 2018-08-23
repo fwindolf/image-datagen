@@ -115,8 +115,11 @@ class AM2018TxtLoader(LoaderBase):
 
         for i, p in enumerate(points):
             px, py = int(float(p[0])), int(float(p[1]))
-            draw_img.ellipse((px, py, px + 2 * self.radius - 1, py + 2 * self.radius - 1), fill=1)
-            draw_lbl.ellipse((px, py, px + 2 * self.radius - 1, py + 2 * self.radius - 1), fill=int(classes[i]))
+            r = self.radius - 2
+            #draw_img.ellipse((px - r, py - r, px + r, py + r), fill=1)
+            #draw_lbl.ellipse((px - r, py - r, px + r, py + r), fill=int(classes[i]))
+            draw_img.ellipse((px, py, px + 2*r, py + 2*r), fill=1)
+            draw_lbl.ellipse((px, py, px + 2*r, py + 2*r), fill=int(classes[i]))
 
         del draw_img, draw_lbl # destroy objects to draw on
 
@@ -172,16 +175,17 @@ class AM2018TxtLoader(LoaderBase):
             cx, cy = int(self.shape[0]/2), int(self.shape[1]/2)
             
             # crop window with ORIG_SHAPE around SIM_ORIGIN
-            if abs(px + 2 * self.radius - ox) > cx: 
+            if abs(px - ox) > cx + self.radius:
                 continue
-            if abs(py + 2 * self.radius - oy) > cy: 
+            if abs(py - oy) > cy + self.radius: 
                 continue            
             
             # only paint particles that are visible
             pxc, pyc = int(px + cx - ox), int(py + cy - oy)
             
-            draw_img.ellipse((pxc, pyc, pxc + 2 * self.radius - 1, pyc + 2 * self.radius - 1), fill=1)
-            draw_lbl.ellipse((pxc, pyc, pxc + 2 * self.radius - 1, pyc + 2 * self.radius - 1), fill=int(classes[i]))
+            r = self.radius - 1
+            draw_img.ellipse((pxc - r, pyc - r, pxc + r, pyc + r), fill=1)
+            draw_lbl.ellipse((pxc - r, pyc - r, pxc + r, pyc + r), fill=int(classes[i]))
 
         del draw_img, draw_lbl
 
