@@ -56,25 +56,15 @@ class AM2018MixedLoader(LoaderBase):
         
         return data
 
-    def __crop_image(self, image, shape):
-        """
-        Crop the input image to shape
-        """
-        return image[0:shape[0], 0:shape[0]]
-
     def _get_image(self, file, shape=None, source='auto'):
         """
         Get a real image from the file placeholder
         """
-        img = self.img_loader._get_image(file, shape, source)
-        img = self.__crop_image(img, self.txt_loader.shape)
-        
-        return img
+        return self.img_loader._get_image(file, shape, source)
 
     def _get_label(self, file, shape=None, source='auto'):
         """
         Get an abstracted image as label.
         """
         file = file % ('txt', 'xyz')
-        lbl = self.txt_loader._get_image(file, shape, source)
-        return lbl
+        return self.txt_loader._get_image(file, shape, source)
