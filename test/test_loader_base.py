@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from universal_datagen.loader.loader_base import LoaderBase
+from image_datagen.loader.loader_base import LoaderBase
 
 class TestLoaderBaseResize(unittest.TestCase):
     def setUp(self):

@@ -1,14 +1,14 @@
 import unittest
 import numpy as np
 
-from universal_datagen.loader.loader_image import AM2018ImageLoader, ORIG_SHAPE
+from image_datagen.loader.loader_image import AM2018ImageLoader, ORIG_SHAPE
 
 data_paths = [
-    'universal_datagen/test/data/image/', 
+    'image_datagen/test/data/image/', 
 ]
 files = [
-    'universal_datagen/test/data/image/%s/00000.%s',
-    'universal_datagen/test/data/image/%s/00001.%s',
+    'image_datagen/test/data/image/%s/00000.%s',
+    'image_datagen/test/data/image/%s/00001.%s',
 ]
 num_classes = 4
 

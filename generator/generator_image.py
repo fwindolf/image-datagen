@@ -1,5 +1,5 @@
-from universal_datagen.generator.generator_base import GeneratorBase
-from universal_datagen.loader.loader_image import AM2018ImageLoader, BubblesImageLoader
+from image_datagen.generator.generator_base import GeneratorBase
+from image_datagen.loader.loader_image import AM2018ImageLoader, BubblesImageLoader
 
 class AM2018ImageGenerator(GeneratorBase):
     """

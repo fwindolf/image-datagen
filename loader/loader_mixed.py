@@ -3,9 +3,9 @@ import glob
 import os
 from PIL import Image, ImageDraw
 
-from universal_datagen.loader.loader_base import LoaderBase
-from universal_datagen.loader.loader_text import AM2018TxtLoader
-from universal_datagen.loader.loader_image import ImageLoader
+from image_datagen.loader.loader_base import LoaderBase
+from image_datagen.loader.loader_text import AM2018TxtLoader
+from image_datagen.loader.loader_image import ImageLoader
 
 TXT_FOLDER = "txt"
 

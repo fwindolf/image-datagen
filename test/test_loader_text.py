@@ -1,17 +1,17 @@
 import unittest
 import numpy as np
 
-from universal_datagen.loader.loader_text import AM2018TxtLoader, ORIG_SHAPE
+from image_datagen.loader.loader_text import AM2018TxtLoader, ORIG_SHAPE
 
 data_paths = [
-    'universal_datagen/test/data/text/sim', 
-    'universal_datagen/test/data/text/exp'
+    'image_datagen/test/data/text/sim', 
+    'image_datagen/test/data/text/exp'
 ]
 txtfiles = [
-    'universal_datagen/test/data/text/exp/00000.xyz',  # exp before sim (alphabetically)
-    'universal_datagen/test/data/text/exp/00001.xyz', 
-    'universal_datagen/test/data/text/sim/1.xyz', 
-    'universal_datagen/test/data/text/sim/2.xyz'
+    'image_datagen/test/data/text/exp/00000.xyz',  # exp before sim (alphabetically)
+    'image_datagen/test/data/text/exp/00001.xyz', 
+    'image_datagen/test/data/text/sim/1.xyz', 
+    'image_datagen/test/data/text/sim/2.xyz'
 ]
 num_classes = 4 # with unknown
 

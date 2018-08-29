@@ -1,5 +1,5 @@
-from universal_datagen.generator.generator_base import GeneratorBase
-from universal_datagen.loader.loader_mixed import AM2018MixedLoader
+from image_datagen.generator.generator_base import GeneratorBase
+from image_datagen.loader.loader_mixed import AM2018MixedLoader
 
 class AM2018MixedGenerator(GeneratorBase):
     """

@@ -1,5 +1,5 @@
-from universal_datagen.generator.generator_base import GeneratorBase
-from universal_datagen.loader.loader_text import AM2018TxtLoader
+from image_datagen.generator.generator_base import GeneratorBase
+from image_datagen.loader.loader_text import AM2018TxtLoader
 
 class AM2018TxtGenerator(GeneratorBase):
     """

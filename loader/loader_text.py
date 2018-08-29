@@ -3,7 +3,7 @@ import glob
 import os
 from PIL import Image, ImageDraw
 
-from universal_datagen.loader.loader_base import LoaderBase
+from image_datagen.loader.loader_base import LoaderBase
 
 ORIG_SHAPE = (1600, 1600)
 RADIUS = 10

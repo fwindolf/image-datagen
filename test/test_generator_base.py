@@ -1,8 +1,8 @@
 import unittest
 import numpy as np
 
-from universal_datagen.loader.loader_base import LoaderBase
-from universal_datagen.generator.generator_base import GeneratorBase
+from image_datagen.loader.loader_base import LoaderBase
+from image_datagen.generator.generator_base import GeneratorBase
 
 data_paths = []
 

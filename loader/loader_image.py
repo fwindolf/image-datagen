@@ -4,7 +4,7 @@ import glob
 
 from PIL import Image
 
-from universal_datagen.loader.loader_base import LoaderBase
+from image_datagen.loader.loader_base import LoaderBase
 
 class ImageLoader(LoaderBase):
     """
